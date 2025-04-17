@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>بوابة تحميل ملفات التدريب</title>
+  <style>
+    body { font-family: Tahoma, sans-serif; background: #f9f9f9; text-align: center; padding: 30px; }
+    input, textarea, select, button {
+      padding: 10px; font-size: 1.1rem; width: 280px; margin: 5px auto; display: block;
+    }
+    .link { color: green; font-size: 1.2rem; margin-top: 20px; }
+    .error { color: red; font-size: 1rem; margin-top: 15px; }
+    #missingForm { display: none; margin-top: 20px; background: #fff; padding: 20px; border-radius: 10px; border: 1px solid #ccc; }
+    .success { color: green; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>بوابة تحميل ملفات التدريب</h1>
+  <p>الرجاء إدخال الرقم التدريبي:</p>
+  <input type="text" id="traineeId" placeholder="الرقم التدريبي" />
+  <br>
+  <button onclick="search()">عرض الملف</button>
+  <div id="result" class="link"></div>
+  <div id="error" class="error"></div>
+
+  <div id="missingForm">
+    <h3>لم تجد ملفك؟ أرسل لنا طلب إضافة:</h3>
+    <input type="text" id="fullName" placeholder="الاسم الكامل" required />
+    <input type="text" id="major" placeholder="التخصص" required />
+    <textarea id="reason" placeholder="سبب عدم وجود الملف أو أي ملاحظات" rows="3"></textarea>
+    <button onclick="submitRequest()">إرسال الطلب</button>
+    <div class="success" id="formSuccess"></div>
+  </div>
+
+  <script>
+    const sheetURL = "https://script.google.com/macros/s/AKfycbwXwifpbkgbFZLWPRy6-no-ZQ-bjlrCy9xCoM87_ZUJ54nqk8-2MhY7XoX1nr9aruiu/exec";
+
+    function search() {
+      const id = document.getElementById('traineeId').value.trim();
+      const resultDiv = document.getElementById('result');
+      const errorDiv = document.getElementById('error');
+      const form = document.getElementById('missingForm');
+      document.getElementById('formSuccess').innerText = '';
+      resultDiv.innerHTML = '';
+      errorDiv.innerHTML = '';
+      form.style.display = 'none';
+
+      if (!id) {
+        errorDiv.innerText = 'الرجاء إدخال الرقم التدريبي.';
+        return;
+      }
+
+      const fileUrl = `files/${id}.pdf`;
+
+      fetch(fileUrl, { method: 'HEAD' })
+        .then(response => {
+          if (response.ok) {
+            resultDiv.innerHTML = `<a href='${fileUrl}' download>تحميل الملف</a>`;
+            fetch(sheetURL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `traineeId=${id}`
+            });
+          } else {
+            errorDiv.innerText = 'لم يتم العثور على ملف مطابق لهذا الرقم.';
+            form.style.display = 'block';
+          }
+        })
+        .catch(() => {
+          errorDiv.innerText = 'حدث خطأ أثناء البحث عن الملف.';
+        });
+    }
+
+    function submitRequest() {
+      const fullName = document.getElementById('fullName').value.trim();
+      const traineeId = document.getElementById('traineeId').value.trim();
+      const major = document.getElementById('major').value.trim();
+      const reason = document.getElementById('reason').value.trim();
+      const successMsg = document.getElementById('formSuccess');
+
+      if (!fullName || !traineeId || !major) {
+        successMsg.innerText = "الرجاء تعبئة جميع الحقول المطلوبة.";
+        return;
+      }
+
+      const formData = `fullName=${encodeURIComponent(fullName)}&traineeId=${encodeURIComponent(traineeId)}&major=${encodeURIComponent(major)}&reason=${encodeURIComponent(reason)}`;
+
+      fetch(sheetURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+      });
+
+      successMsg.innerText = "✅ تم استلام طلبك بنجاح، شكرًا لتواصلك.";
+    }
+  </script>
+</body>
+</html>
