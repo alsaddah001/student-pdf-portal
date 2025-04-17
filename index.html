@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>بوابة تحميل ملفات التدريب</title>
+  <style>
+    body {
+      font-family: Tahoma, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+    }
+    input, textarea, button {
+      margin: 10px 0;
+      padding: 10px;
+      width: 90%;
+      max-width: 400px;
+      font-size: 1rem;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .hidden { display: none; }
+    .section { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h2>بوابة تحميل ملفات التدريب</h2>
+
+  <div class="section">
+    <label>الرجاء إدخال الرقم التدريبي:</label><br>
+    <input type="text" id="traineeId" placeholder="الرقم التدريبي" />
+    <br>
+    <button onclick="search()">عرض الملف</button>
+    <div id="result" class="success"></div>
+    <div id="error" class="error"></div>
+  </div>
+
+  <div class="section hidden" id="reportSection">
+    <h3>لم تجد ملفك؟</h3>
+    <p>املأ النموذج التالي لإبلاغ المسؤول:</p>
+    <input type="text" id="fullName" placeholder="الاسم الكامل">
+    <input type="text" id="major" placeholder="التخصص">
+    <textarea id="reason" placeholder="سبب عدم وجود الملف..."></textarea>
+    <button onclick="submitRequest()">إرسال الطلب</button>
+    <div id="reportStatus" class="success"></div>
+  </div>
+
+  <script>
+    const sheetURL = "https://script.google.com/macros/s/AKfycbwXwifpbkgbFZLWPRy6-no-ZQ-bjlrCy9xCoM87_ZUJ54nqk8-2MhY7XoX1nr9aruiu/exec";
+
+    function search() {
+      const id = document.getElementById('traineeId').value.trim();
+      const result = document.getElementById('result');
+      const error = document.getElementById('error');
+      const reportSection = document.getElementById('reportSection');
+
+      result.innerHTML = '';
+      error.innerHTML = '';
+      reportSection.classList.add('hidden');
+
+      if (!id) {
+        error.textContent = "الرجاء إدخال الرقم التدريبي.";
+        return;
+      }
+
+      const fileUrl = `files/${id}.pdf`;
+
+      fetch(fileUrl, { method: 'HEAD' })
+        .then(res => {
+          if (res.ok) {
+            result.innerHTML = `<a href="${fileUrl}" download>تحميل الملف</a>`;
+            logDownload(id);
+          } else {
+            error.textContent = "لم يتم العثور على ملف مطابق لهذا الرقم.";
+            reportSection.classList.remove('hidden');
+          }
+        })
+        .catch(() => {
+          error.textContent = "حدث خطأ أثناء البحث عن الملف.";
+        });
+    }
+
+    function logDownload(id) {
+      fetch(sheetURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `traineeId=${id}`
+      });
+    }
+
+    function submitRequest() {
+      const fullName = document.getElementById('fullName').value.trim();
+      const traineeId = document.getElementById('traineeId').value.trim();
+      const major = document.getElementById('major').value.trim();
+      const reason = document.getElementById('reason').value.trim();
+      const reportStatus = document.getElementById('reportStatus');
+
+      if (!fullName || !traineeId || !major || !reason) {
+        reportStatus.innerHTML = "<span class='error'>يرجى تعبئة جميع الحقول.</span>";
+        return;
+      }
+
+      fetch(sheetURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, traineeId, major, reason })
+      });
+
+      reportStatus.innerText = "تم إرسال طلبك بنجاح، سيتم إضافة الملف لاحقًا.";
+    }
+  </script>
+</body>
+</html>
